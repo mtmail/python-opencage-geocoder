@@ -56,7 +56,9 @@ class RateLimitExceededError(OpenCageGeocodeError):
 
     def __unicode__(self):
         """Convert exception to a string."""
-        return "Your rate limit has expired. It will reset to {0} on {1}".format(self.reset_to, self.reset_time.isoformat())
+        return "Your rate limit has expired. It will reset to {0} on {1}".format(
+            self.reset_to, self.reset_time.isoformat()
+        )
 
     __str__ = __unicode__
 
@@ -121,7 +123,8 @@ class OpenCageGeocode:
 
         :returns: Dict results
         :raises InvalidInputError: if the query string is not a unicode string
-        :raises RateLimitExceededError: if you have exceeded the number of queries you can make. Exception says when you can try again
+        :raises RateLimitExceededError: if you have exceeded the number of queries you can make.
+        :                                  Exception says when you can try again
         :raises UnknownError: if something goes wrong with the OpenCage API
 
         """
@@ -147,7 +150,8 @@ class OpenCageGeocode:
         :param lng: Longitude
         :return: Results from OpenCageData
         :rtype: dict
-        :raises RateLimitExceededError: if you have exceeded the number of queries you can make. Exception says when you can try again
+        :raises RateLimitExceededError: if you have exceeded the number of queries you can make.
+        :                                  Exception says when you can try again
         :raises UnknownError: if something goes wrong with the OpenCage API
         """
         return self.geocode(_query_for_reverse_geocoding(lat, lng), **kwargs)
@@ -168,15 +172,18 @@ class OpenCageGeocode:
         if (response.status_code == 402 or response.status_code == 429):
             # Rate limit exceeded
             reset_time = datetime.utcfromtimestamp(response.json()['rate']['reset'])
-            raise RateLimitExceededError(reset_to=int(response.json()['rate']['limit']), reset_time=reset_time)
+            raise RateLimitExceededError(
+                reset_to=int(response.json()['rate']['limit']),
+                reset_time=reset_time
+            )
 
         if response.status_code == 500:
             raise UnknownError("500 status code from API")
 
         try:
             response_json = response.json()
-        except ValueError as e:
-            raise UnknownError("Non-JSON result from server") from e
+        except ValueError as exc:
+            raise UnknownError("Non-JSON result from server") from exc
 
         if 'results' not in response_json:
             raise UnknownError("JSON from API doesn't have a 'results' key")
@@ -222,9 +229,10 @@ def floatify_latlng(input_value):
         if len(input_value) == 2 and sorted(input_value.keys()) == ['lat', 'lng']:
             # This dict has only 2 keys 'lat' & 'lon'
             return {'lat': float_if_float(input_value["lat"]), 'lng': float_if_float(input_value["lng"])}
-        else:
-            return dict((key, floatify_latlng(value)) for key, value in input_value.items())
-    elif isinstance(input_value, collections.abc.MutableSequence):
+
+        return dict((key, floatify_latlng(value)) for key, value in input_value.items())
+
+    if isinstance(input_value, collections.abc.MutableSequence):
         return [floatify_latlng(x) for x in input_value]
-    else:
-        return input_value
+
+    return input_value
